@@ -1,0 +1,4 @@
+customer_id,monthly_income_avg,income_variability_pct,essential_expenses_avg
+CU-001,3500,10,1800
+CU-002,2500,15,1600
+CU-003,10000,10,4000

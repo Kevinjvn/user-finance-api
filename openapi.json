@@ -1,0 +1,531 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Debt Analysis API",
+        "description": "API for analyzing customer debt scenarios including minimum payment, optimized payment, and consolidation strategies",
+        "version": "1.0.0",
+        "contact": {
+            "name": "API Support"
+        }
+    },
+    "servers": [
+        {
+            "url": "https://wapuserfinance-hqaafugdhqh4fwfj.eastus2-01.azurewebsites.net"
+        }
+    ],
+    "paths": {
+        "/api/analyze": {
+            "post": {
+                "summary": "Analyze debt scenarios",
+                "description": "Analyze debt payment scenarios for a specific customer and product (loan or credit card)",
+                "operationId": "analyzeDebt",
+                "tags": [
+                    "Analysis"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AnalyzeRequest"
+                            },
+                            "examples": {
+                                "loan_example": {
+                                    "summary": "Loan analysis request",
+                                    "value": {
+                                        "customer_id": "CU-001",
+                                        "product_type": "loan"
+                                    }
+                                },
+                                "card_example": {
+                                    "summary": "Credit card analysis request",
+                                    "value": {
+                                        "customer_id": "CU-002",
+                                        "product_type": "card"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Analysis completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AnalyzeResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "validation_error": {
+                                        "summary": "Validation error",
+                                        "value": {
+                                            "error": "Invalid request data",
+                                            "error_type": "VALIDATION_ERROR",
+                                            "details": {
+                                                "validation_errors": [
+                                                    "customer_id is required",
+                                                    "product_type must be 'loan' or 'card'"
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Customer or product not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "not_found": {
+                                        "summary": "Product not found",
+                                        "value": {
+                                            "error": "No loan found for customer CU-999",
+                                            "error_type": "ANALYSIS_ERROR"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Service unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                },
+                                "examples": {
+                                    "not_ready": {
+                                        "summary": "Service not initialized",
+                                        "value": {
+                                            "error": "Service not initialized. Data not loaded from Azure Storage.",
+                                            "error_type": "SERVICE_NOT_READY"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AnalyzeRequest": {
+                "type": "object",
+                "required": [
+                    "customer_id",
+                    "product_type"
+                ],
+                "properties": {
+                    "customer_id": {
+                        "type": "string",
+                        "description": "Unique identifier for the customer",
+                        "example": "CU-001"
+                    },
+                    "product_type": {
+                        "type": "string",
+                        "enum": [
+                            "loan",
+                            "card"
+                        ],
+                        "description": "Type of product to analyze",
+                        "example": "loan"
+                    }
+                }
+            },
+            "AnalyzeResponse": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {
+                        "type": "string",
+                        "example": "CU-001"
+                    },
+                    "product_type": {
+                        "type": "string",
+                        "example": "loan"
+                    },
+                    "product_id": {
+                        "type": "string",
+                        "example": "LN-001"
+                    },
+                    "scenarios": {
+                        "type": "object",
+                        "properties": {
+                            "minimum_payment": {
+                                "$ref": "#/components/schemas/ScenarioResult"
+                            },
+                            "optimized_payment": {
+                                "$ref": "#/components/schemas/ScenarioResultOptimized"
+                            },
+                            "consolidation": {
+                                "$ref": "#/components/schemas/ConsolidationResult"
+                            }
+                        }
+                    },
+                    "comparison": {
+                        "$ref": "#/components/schemas/Comparison"
+                    }
+                }
+            },
+            "ScenarioResult": {
+                "type": "object",
+                "properties": {
+                    "scenario_name": {
+                        "type": "string",
+                        "example": "Minimum Payment"
+                    },
+                    "customer_id": {
+                        "type": "string",
+                        "example": "CU-001"
+                    },
+                    "product_id": {
+                        "type": "string",
+                        "example": "LN-001"
+                    },
+                    "product_type": {
+                        "type": "string",
+                        "example": "loan"
+                    },
+                    "summary": {
+                        "type": "object",
+                        "properties": {
+                            "original_balance": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 25000
+                            },
+                            "total_paid": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 35678.9
+                            },
+                            "total_interest": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 10678.9
+                            },
+                            "months_to_payoff": {
+                                "type": "integer",
+                                "example": 120
+                            },
+                            "monthly_payment_avg": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 297.32
+                            }
+                        }
+                    },
+                    "monthly_projection": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MonthlyProjection"
+                        }
+                    }
+                }
+            },
+            "ScenarioResultOptimized": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/ScenarioResult"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "summary": {
+                                "type": "object",
+                                "properties": {
+                                    "safe_monthly_allocation": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 500
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "ConsolidationResult": {
+                "type": "object",
+                "properties": {
+                    "scenario_name": {
+                        "type": "string",
+                        "example": "Consolidation"
+                    },
+                    "customer_id": {
+                        "type": "string",
+                        "example": "CU-001"
+                    },
+                    "product_id": {
+                        "type": "string",
+                        "example": "LN-001"
+                    },
+                    "product_type": {
+                        "type": "string",
+                        "example": "loan"
+                    },
+                    "eligible": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "offer_id": {
+                        "type": "string",
+                        "example": "OFFER-001"
+                    },
+                    "offer_details": {
+                        "type": "object",
+                        "properties": {
+                            "new_rate_pct": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 4.5
+                            },
+                            "new_term_months": {
+                                "type": "integer",
+                                "example": 60
+                            },
+                            "original_rate_pct": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 8.5
+                            }
+                        }
+                    },
+                    "summary": {
+                        "type": "object",
+                        "properties": {
+                            "original_balance": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 25000
+                            },
+                            "total_paid": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 28456.78
+                            },
+                            "total_interest": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 3456.78
+                            },
+                            "months_to_payoff": {
+                                "type": "integer",
+                                "example": 60
+                            },
+                            "monthly_payment": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 474.28
+                            }
+                        }
+                    },
+                    "monthly_projection": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MonthlyProjection"
+                        }
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Message when not eligible",
+                        "example": "No consolidation offers available for this product"
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Reasons for ineligibility",
+                        "example": [
+                            "Credit score 620 is less than required 650 for offer OFFER-001."
+                        ]
+                    }
+                }
+            },
+            "MonthlyProjection": {
+                "type": "object",
+                "properties": {
+                    "month": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "payment": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 297.32
+                    },
+                    "interest": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 177.08
+                    },
+                    "principal": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 120.24
+                    },
+                    "balance": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 24879.76
+                    },
+                    "late_fee": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 0
+                    }
+                }
+            },
+            "Comparison": {
+                "type": "object",
+                "properties": {
+                    "minimum_payment": {
+                        "type": "object",
+                        "properties": {
+                            "total_paid": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 35678.9
+                            },
+                            "total_interest": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 10678.9
+                            },
+                            "months": {
+                                "type": "integer",
+                                "example": 120
+                            }
+                        }
+                    },
+                    "optimized_payment": {
+                        "type": "object",
+                        "properties": {
+                            "total_paid": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 29234.56
+                            },
+                            "total_interest": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 4234.56
+                            },
+                            "months": {
+                                "type": "integer",
+                                "example": 65
+                            },
+                            "savings_vs_minimum": {
+                                "$ref": "#/components/schemas/Savings"
+                            }
+                        }
+                    },
+                    "consolidation": {
+                        "type": "object",
+                        "properties": {
+                            "eligible": {
+                                "type": "boolean",
+                                "example": true
+                            },
+                            "total_paid": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 28456.78
+                            },
+                            "total_interest": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 3456.78
+                            },
+                            "months": {
+                                "type": "integer",
+                                "example": 60
+                            },
+                            "savings_vs_minimum": {
+                                "$ref": "#/components/schemas/Savings"
+                            }
+                        }
+                    }
+                }
+            },
+            "Savings": {
+                "type": "object",
+                "properties": {
+                    "interest_saved": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 7222.12
+                    },
+                    "total_saved": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 7222.12
+                    },
+                    "time_saved_months": {
+                        "type": "integer",
+                        "example": 60
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "required": [
+                    "error",
+                    "error_type"
+                ],
+                "properties": {
+                    "error": {
+                        "type": "string",
+                        "description": "Human-readable error message",
+                        "example": "No loan found for customer CU-001"
+                    },
+                    "error_type": {
+                        "type": "string",
+                        "description": "Error type code",
+                        "enum": [
+                            "VALIDATION_ERROR",
+                            "ANALYSIS_ERROR",
+                            "FILE_NOT_FOUND",
+                            "AZURE_CONNECTION_ERROR",
+                            "SERVICE_NOT_READY",
+                            "INTERNAL_ERROR",
+                            "NOT_FOUND",
+                            "METHOD_NOT_ALLOWED"
+                        ],
+                        "example": "ANALYSIS_ERROR"
+                    },
+                    "details": {
+                        "type": "object",
+                        "description": "Additional error details",
+                        "additionalProperties": true
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Analysis",
+            "description": "Debt analysis operations"
+        }
+    ]
+}
